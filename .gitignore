@@ -130,3 +130,6 @@ dmypy.json
 
 *.json
 *.pickle
+
+ultrassound/
+imgs_testes/
