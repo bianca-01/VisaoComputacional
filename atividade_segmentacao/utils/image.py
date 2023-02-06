@@ -9,10 +9,18 @@ from utils.segmentacao import Segmentacao
 
 class Image:
     def __init__(self, path):
-        self.load(path)
+        self.name = None
+        self.img = None
+        self.mask = None
+        self.mask_res = None
         self.img_media = None
+        self.img_res = None
+        self.background = None
+        self.foreground = None
+        self.algoritmos = None
         self.img_segmentada = {}
         self.metricas = {}
+        self.load(path)
 
 
     def load(self, path):   
@@ -46,10 +54,16 @@ class Image:
     def segmentar(self, algoritmo, n_clusters=None):
         if algoritmo == 'kmeans':
             self.img_segmentada['kmeans'] = Segmentacao().kmeans(self.img_media, n_clusters)
+        
         elif algoritmo == 'niblack':
             self.img_segmentada['niblack'] = Segmentacao().niblack(self.img_media)
+        
         elif algoritmo == 'otsu':
             self.img_segmentada['otsu'] = Segmentacao().otsu(self.img_media)
+        
+        elif algoritmo == 'agglomerative':
+            self.img_segmentada['agglomerative'] = Segmentacao().agglomerative(self.img_res, n_clusters)
+        
         else:
             raise Exception('Algoritmo não reconhecido')
         
@@ -69,17 +83,33 @@ class Image:
         plt.imsave(path, img, cmap='gray')
 
 
-    def redimensionar(self, porcentagem=0.8):
+    def redimensionar(self, porcentagem=0.6):
         h, w = self.img.shape
-        nh, nw = int(h*porcentagem), int(w*porcentagem)
+        p = 1-porcentagem
+        nh, nw = int(h*p), int(w*p)
         self.img_res = resize(self.img, (nh,nw), anti_aliasing=True)
+
+    
+    def redimensionar_mask(self, porcentagem=0.6):
+        h, w = self.mask.shape
+        p = 1-porcentagem
+        nh, nw = int(h*p), int(w*p)
+        self.mask_res = resize(self.mask, (nh,nw), anti_aliasing=True)
         
 
     def calcular_metricas(self):
-        self.metricas['accuracy'] = accuracy_score(self.mask.ravel(), self.img_segmentada['kmeans'].ravel())
-        self.metricas['kappa'] = cohen_kappa_score(self.mask.ravel(), self.img_segmentada['kmeans'].ravel())
-        self.metricas['jaccard'] = jaccard_score(self.mask.ravel(), self.img_segmentada['kmeans'].ravel(), average='micro')
-        
-        print('Accuracy:', self.metricas['accuracy'])
-        print('Kappa:', self.metricas['kappa'])
-        print('Jaccard:', self.metricas['jaccard'])
+        self.algoritmos = sorted(list(self.img_segmentada.keys()))
+        for algoritmo in self.algoritmos:
+            metricas = {}
+
+            if algoritmo != 'aglomerative':
+                metricas['accuracy'] = accuracy_score(self.mask.ravel(), self.img_segmentada[algoritmo].ravel())
+                metricas['kappa'] = cohen_kappa_score(self.mask.ravel(), self.img_segmentada[algoritmo].ravel())
+                metricas['jaccard'] = jaccard_score(self.mask.ravel(), self.img_segmentada[algoritmo].ravel(), average='micro')
+            
+            else:
+                metricas['accuracy'] = accuracy_score(self.mask_res.ravel(), self.img_segmentada[algoritmo].ravel())
+                metricas['kappa'] = cohen_kappa_score(self.mask_res.ravel(), self.img_segmentada[algoritmo].ravel())
+                metricas['jaccard'] = jaccard_score(self.mask_res.ravel(), self.img_segmentada[algoritmo].ravel(), average='micro')
+            
+            self.metricas[algoritmo] = metricas
