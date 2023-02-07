@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from skimage.io import imread
 from skimage.filters.rank import mean
 from skimage.transform import resize
-from sklearn.metrics import accuracy_score,  jaccard_score
+from sklearn.metrics import accuracy_score,  jaccard_score, f1_score
 from utils.segmentacao import Segmentacao
 
 
@@ -70,7 +70,6 @@ class Image:
         
 
     def clusters(self):
-        #mascaras
         cluster1 = self.img_segmentada['kmeans'] == 0
         cluster2 = self.img_segmentada['kmeans'] == 1
         
@@ -107,9 +106,11 @@ class Image:
             if algoritmo != 'agglomerative':
                 m['accuracy'] = accuracy_score(self.mask.ravel(), self.img_segmentada[algoritmo].ravel())
                 m['jaccard'] = jaccard_score(self.mask.ravel(), self.img_segmentada[algoritmo].ravel(), average='weighted')
-            
+                m['f1'] = f1_score(self.mask.ravel(), self.img_segmentada[algoritmo].ravel(), average='weighted')
+
             else:
                 m['accuracy'] = accuracy_score(np.argmax(self.mask_res, axis=1), np.argmax(self.img_segmentada[algoritmo], axis=1))
                 m['jaccard'] = jaccard_score(np.argmax(self.mask_res, axis=1), np.argmax(self.img_segmentada[algoritmo], axis=1), average='weighted')
-            
+                m['f1'] = f1_score(np.argmax(self.mask_res, axis=1), np.argmax(self.img_segmentada[algoritmo], axis=1), average='weighted')
+
             self.metricas[algoritmo] = m
