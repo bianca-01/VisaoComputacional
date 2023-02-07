@@ -1,3 +1,4 @@
+import numpy as np
 from sklearn.cluster import KMeans, AgglomerativeClustering
 from skimage.filters import threshold_niblack, threshold_otsu
 
@@ -23,8 +24,7 @@ class Segmentacao:
         return result
     
 
-    def agglomerative(self, img, n_clusters=2):
-        ac = AgglomerativeClustering(n_clusters=n_clusters).fit(img.reshape(-1,1))
+    def agglomerative(self, img):
+        ac = AgglomerativeClustering(n_clusters=2).fit(img.reshape(-1,1))
         result = ac.labels_.reshape(img.shape)
         return result
-

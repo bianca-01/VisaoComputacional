@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from skimage.io import imread
 from skimage.filters.rank import mean
 from skimage.transform import resize
-from sklearn.metrics import accuracy_score, f1_score, jaccard_score, cohen_kappa_score
+from sklearn.metrics import accuracy_score,  jaccard_score
 from utils.segmentacao import Segmentacao
 
 
@@ -38,6 +38,7 @@ class Image:
         self.mask = imread(path)
         if len(self.mask.shape) == 3:
             self.mask = self.mask[:,:,0] 
+            
         
     def show(self, img=None):
         if img is None:
@@ -46,7 +47,7 @@ class Image:
         plt.show()
 
 
-    def filtro_media(self, k=10):
+    def filtro_media(self, k=5):
         filtro = np.ones((k,k)) 
         self.img_media = mean(self.img, selem=filtro)
     
@@ -62,21 +63,22 @@ class Image:
             self.img_segmentada['otsu'] = Segmentacao().otsu(self.img_media)
         
         elif algoritmo == 'agglomerative':
-            self.img_segmentada['agglomerative'] = Segmentacao().agglomerative(self.img_res, n_clusters)
+            self.img_segmentada['agglomerative'] = Segmentacao().agglomerative(self.img_res)
         
         else:
             raise Exception('Algoritmo não reconhecido')
         
 
     def clusters(self):
+        #mascaras
         cluster1 = self.img_segmentada['kmeans'] == 0
         cluster2 = self.img_segmentada['kmeans'] == 1
         
-        self.background = np.zeros_like(self.img_media)
-        self.background[cluster1] = self.img_media[cluster1]
+        self.background = np.zeros_like(self.img)
+        self.background[cluster1] = self.img[cluster1]
 
-        self.foreground = np.zeros_like(self.img_media)
-        self.foreground[cluster2] = self.img_media[cluster2]
+        self.foreground = np.zeros_like(self.img)
+        self.foreground[cluster2] = self.img[cluster2]
 
 
     def save(self, path, img):
@@ -100,16 +102,14 @@ class Image:
     def calcular_metricas(self):
         self.algoritmos = sorted(list(self.img_segmentada.keys()))
         for algoritmo in self.algoritmos:
-            metricas = {}
+            m = {}
 
-            if algoritmo != 'aglomerative':
-                metricas['accuracy'] = accuracy_score(self.mask.ravel(), self.img_segmentada[algoritmo].ravel())
-                metricas['kappa'] = cohen_kappa_score(self.mask.ravel(), self.img_segmentada[algoritmo].ravel())
-                metricas['jaccard'] = jaccard_score(self.mask.ravel(), self.img_segmentada[algoritmo].ravel(), average='micro')
+            if algoritmo != 'agglomerative':
+                m['accuracy'] = accuracy_score(self.mask.ravel(), self.img_segmentada[algoritmo].ravel())
+                m['jaccard'] = jaccard_score(self.mask.ravel(), self.img_segmentada[algoritmo].ravel(), average='weighted')
             
             else:
-                metricas['accuracy'] = accuracy_score(self.mask_res.ravel(), self.img_segmentada[algoritmo].ravel())
-                metricas['kappa'] = cohen_kappa_score(self.mask_res.ravel(), self.img_segmentada[algoritmo].ravel())
-                metricas['jaccard'] = jaccard_score(self.mask_res.ravel(), self.img_segmentada[algoritmo].ravel(), average='micro')
+                m['accuracy'] = accuracy_score(np.argmax(self.mask_res, axis=1), np.argmax(self.img_segmentada[algoritmo], axis=1))
+                m['jaccard'] = jaccard_score(np.argmax(self.mask_res, axis=1), np.argmax(self.img_segmentada[algoritmo], axis=1), average='weighted')
             
-            self.metricas[algoritmo] = metricas
+            self.metricas[algoritmo] = m
